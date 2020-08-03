@@ -1,0 +1,127 @@
+----> AADR stock analysis <---- from kaggle notebook
+
+# %% [code]
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 5GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+
+# %% [code]
+from datetime import datetime 
+import matplotlib.pyplot as plt
+plt.style.use('fivethirtyeight')
+
+# %% [code]
+df=pd.read_csv('/kaggle/input/aadr.us.csv')
+
+# %% [code]
+df.head(10)
+
+# %% [code]
+plt.figure(figsize=(12.5,4.5))
+plt.plot(df['Open'], label = 'AADR')
+plt.title('AADR Open Price History')
+plt.xlabel('Date')
+plt.ylabel('USD')
+plt.legend(loc='upper left')
+plt.show()
+
+# %% [code]
+sop = pd.DataFrame()
+sop['Open'] = df['Open'].rolling(window=7).mean()
+sop
+
+# %% [code]
+lop = pd.DataFrame()
+lop['Open']=df['Open'].rolling(window=28).mean()
+lop
+
+# %% [code]
+slop = pd.DataFrame()
+slop['Open']=df['Open'].rolling(window=200).mean()
+slop
+
+# %% [code]
+plt.figure(figsize=(12.5,4.5))
+plt.plot(df['Open'], label = 'AADR')
+plt.plot(sop['Open'], label = 'AADR 30 day average')
+plt.plot(lop['Open'], label = 'AADR 120 day average')
+plt.title('AADR Open Price History')
+plt.xlabel('Date')
+plt.ylabel('USD')
+plt.legend(loc='upper left')
+plt.show()
+
+# %% [code]
+newdf = pd.DataFrame ()
+newdf['df'] = df['Open']
+newdf['sop'] = sop['Open']
+newdf['lop'] = lop['Open']
+newdf
+
+# %% [code]
+def buy (newdf):
+    buyAlert = []
+    sellAlert = []
+    flag = -1
+    for i in range(len(newdf)):
+        if newdf['sop'][i] <= newdf['lop'][i]:
+            if flag != 1:
+                buyAlert.append(newdf['df'][i])
+                sellAlert.append(np.nan)
+                flag = 1
+            else:
+                buyAlert.append(np.nan)
+                sellAlert.append(np.nan)
+        elif newdf['sop'][i] >= newdf['lop'][i]:
+            if flag != 0:
+                sellAlert.append(newdf['df'][i])
+                buyAlert.append(np.nan)
+                flag = 0
+            else:
+                sellAlert.append(np.nan)
+                buyAlert.append(np.nan)
+        else:
+            buyAlert.append(np.nan)
+            sellAlert.append(np.nan)
+    return(buyAlert,sellAlert)
+                
+
+
+# %% [code]
+buy = buy(newdf)
+newdf['Buy_Price']= buy[0]
+newdf['sell_Price']= buy[1]
+
+
+# %% [code]
+newdf
+
+# %% [code]
+newdf.isnull().sum()
+
+# %% [code]
+plt.figure(figsize=(12.5,4.5))
+plt.plot(newdf['df'], label = 'AADR', alpha = 3.5)
+#plt.plot(newdf['sop'], label = 'AADR 30 day average')
+#plt.plot(newdf['lop'], label = 'AADR 120 day average')
+plt.scatter(newdf.index,newdf['Buy_Price'],marker='^' , label='Buy',color='green')
+plt.scatter(newdf.index,newdf['sell_Price'],marker= 'v', label='sell',color='red')
+plt.title('AADR Open Purchase Prediction')
+plt.xlabel('Date')
+plt.ylabel('USD')
+plt.legend(loc='upper left')
+plt.show()
